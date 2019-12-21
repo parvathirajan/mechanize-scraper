@@ -101,7 +101,7 @@ class clsBrowserConnect:
 			browswer_object.open(passed_url)
 			logging.info("Redirected to the specified URL: "+ passed_url)
 			return browswer_object
-		
+	
 	def logintoweb(self):
 		"""
 		Get the Webpage as input and return the response as HTML after the successful login
@@ -129,6 +129,12 @@ class clsBrowserConnect:
 		"""
 		resp_obj.retrieve(ret_url,filename)
 		return resp_obj
+	
+	def gethref(self, url_response, extract_string):
+		"""
+		"""
+		href = BeautifulSoup(url_response.response().read().decode('utf-8'), "html.parser").find_all("a", string=extract_string)[0]['href']
+		return href
 
 if __name__ == '__main__':
 	
@@ -140,7 +146,7 @@ if __name__ == '__main__':
 		#Required Script Variables from the Configuration file
 		script_path = os.path.abspath(os.path.dirname(__file__))
 		config_file = (os.path.expanduser(os.path.join(script_path,'.'+scriptnm+'.cfg')))
-		print(config_file)
+
 		config = getConfig(config_file, 'rentrak')
 
 		username	= config['username']
@@ -151,58 +157,45 @@ if __name__ == '__main__':
 		curr_datetime = str(datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f'))
 		
 		log_file_nm = '{}_{}.log'.format(scriptnm, curr_datetime)
-		log_file = os.path.expanduser(os.path.join(script_path,log_file_nm))
+		log_file = os.path.join(script_path,log_file_nm)
 		
 		logging.basicConfig(filename=log_file, 
 					  format='%(asctime)s:%(msecs)09d %(filename)s (%(lineno)d) %(levelname)s   : %(message)s', 
 					  datefmt='%Y%m%d:%H:%M:%S', 
 					  level=logging.INFO)
 		print(log_file)
+		
 		#Create connection with the web server
-		scraper_obj = clsBrowserConnect(username, password, 'https://ondemand.rentrak.com')
+		scraper_obj = clsBrowserConnect(username, password, config['url'])
 		
 		resp = scraper_obj.logintoweb()
-		#print(resp)
 		
-		rd_url = "https://ondemand.rentrak.com/reports/xtns_by_provider.html"
+		rd_url = scraper_obj.url + scraper_obj.gethref(resp, 'Performance By Network')
 		rd_url_response = scraper_obj.openpage(resp, rd_url)
-		rd_url_response.geturl()
-		#print(rd_url_response)
-
-		#print(rd_url_response.geturl())
-		#print(rd_url)
-		print(rd_url_response.geturl() == rd_url)
+		
 		if rd_url_response.geturl() == rd_url:
 			logging.info("Redirected Successfully - "+ rd_url)
 		else:
 			raise Exception
 		
-        rd_url_response.forms()[4].name
-        rd_url_response.form = rd_url_response.forms()[4]
-        #i=0
-        """
-        for control in rd_url_response.form.controls:
-            print(control)
-            print(control.type, control.name)
-            i=i+1
-            if 
-            print(i)
-            print()
-        """
-        ctrl_name = 'date_range'
-        #rd_url_response.form.find_control(ctrl_name, type='select').readonly = False
-        rd_url_response.form.find_control(ctrl_name, type='select').value = ["LAST_FULL_MONTH"]
-        
-        #values = map(int, [item.name for item in rd_url_response.form.find_control(ctrl_name, type='select').items])
-            
-        response = rd_url_response.submit()
-        
-		soup = BeautifulSoup(rd_url_response.response().read().decode('utf-8'), "html.parser")
-		rpt_extract_list = soup.find_all("a", string="Excel")
-		report_file_url = rpt_extract_list[0]['href']
+		rd_url_response.forms()[4].name
+		rd_url_response.form = rd_url_response.forms()[4]
+		"""
+		for control in rd_url_response.form.controls:
+			print(control)
+			print(control.type, control.name)
+			print()
+		"""
+		ctrl_name = 'date_range'
+		rd_url_response.form.find_control(ctrl_name, type='select').value = ["LAST_FULL_MONTH"]
+		
+		response = rd_url_response.submit()
+		
+		report_file_url = scraper_obj.gethref(resp, 'Excel')
 		print(report_file_url)
+
 		#On the Successful redirection we need to call the below func to retieve data form url
-		ret_url = scraper_obj.url+report_file_url
+		ret_url = scraper_obj.url + report_file_url
 		print(ret_url)
 		rpt_name = os.path.basename(os.path.splitext(rd_url)[0])
 		rpt_file = scriptnm + '_' + rpt_name + '_'+ curr_datetime +'.xls'
@@ -211,11 +204,3 @@ if __name__ == '__main__':
 
 	except Exception as e:
 		print('FATAL_ERROR: ' + " from main exception : {0}\n\n{1}".format(e, traceback.format_exc()))
-
-
-#import pandas as pd
-#x= pd.read_excel('web_scraper_xtns_by_provider_20191218_002537_311057.xlsx')
-
-
-
-
