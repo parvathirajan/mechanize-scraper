@@ -132,6 +132,7 @@ class clsBrowserConnect:
 	
 	def gethref(self, url_response, extract_string):
 		"""
+		To get the href of the tab to redirect
 		"""
 		href = BeautifulSoup(url_response.response().read().decode('utf-8'), "html.parser").find_all("a", string=extract_string)[0]['href']
 		return href
